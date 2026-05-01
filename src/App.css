@@ -1,0 +1,597 @@
+/* ===================================================================
+   웹폰트 import - Google Fonts에서 가져옴
+   
+   - Press Start 2P: 8비트 게임 느낌의 픽셀 폰트 (제목·버튼용)
+     이름의 "Start 2P"는 옛날 아케이드 "Push Start 2 Player"에서 따옴
+     무료, 상업 이용 가능 (SIL Open Font License)
+   
+   - VT323: 옛날 컴퓨터 터미널 모니터 폰트 (점수 숫자용)
+   
+   - display=swap: 폰트 다운로드 중에도 임시 폰트로 먼저 표시
+     (성능 최적화 - 정처기 웹표준의 FOIT 방지 기법)
+   
+   원리: 브라우저가 HTTP 요청으로 Google Fonts CDN에서 .woff2 파일 다운
+   (OSI 7계층 - Application Layer, HTTP/HTTPS 프로토콜 사용)
+   =================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+/* ===================================================================
+   :root - HTML 문서 최상위 요소 (= <html> 태그)
+   여기에 CSS Custom Property(변수)를 정의하면 어디서든 var()로 사용 가능
+   
+   이점: 색깔을 한 곳에서 관리. 나중에 테마 바꿀 때 한 줄만 수정
+   정처기 SW공학의 "DRY 원칙(Don't Repeat Yourself)" 실천
+   =================================================================== */
+:root {
+  --bg-deep:     #0a0e27;           /* 깊은 우주 남색 - 배경 */
+  --bg-panel:    #1a1f3a;           /* 패널 배경 (조금 밝은 남색) */
+  --neon-yellow: #ffe600;           /* 네온 노랑 - 메인 강조색 */
+  --neon-pink:   #ff2e93;           /* 네온 핑크 - 패배 표시 */
+  --neon-cyan:   #00f0ff;           /* 네온 사이언 - 승리 표시 */
+  --neon-green:  #39ff14;           /* 네온 초록 - 무승부 / 상태 LED */
+  --pixel-black: 4px 4px 0 #000;    /* 각진 픽셀 그림자 (블러 0px) */
+}
+
+/* ===================================================================
+   전역 리셋 (Universal Reset)
+   * = 모든 요소 선택자
+   브라우저 기본 여백을 제거해서 디자인 일관성 확보
+   =================================================================== */
+* {
+  margin: 0;                        /* 기본 외부 여백 제거 */
+  padding: 0;                       /* 기본 내부 여백 제거 */
+  box-sizing: border-box;           /* 패딩·테두리를 width에 포함 (계산 편함) */
+  image-rendering: pixelated;       /* 이미지 확대 시 부드럽게 X, 픽셀 그대로 O */
+                                    /* (레트로 게임 핵심 - 도트 깨짐 효과) */
+}
+
+/* ===================================================================
+   body - 페이지 전체 기본 스타일
+   =================================================================== */
+body {
+  background: var(--bg-deep);       /* var()로 CSS 변수 사용 */
+  font-family: 'Press Start 2P', monospace;  /* 픽셀 폰트, 실패 시 monospace */
+  color: white;
+  min-height: 100vh;                /* vh = viewport height. 화면 높이의 100% */
+  overflow-x: hidden;               /* 가로 스크롤 막음 (모바일 대응) */
+}
+
+/* ===================================================================
+   CRT 스캔라인 오버레이 (★ 레트로 핵심 효과)
+   
+   원리: 옛날 브라운관 TV는 화면을 가로줄(scanline)로 그림
+   그 줄무늬를 반투명 검정 가로줄 패턴으로 재현
+   
+   repeating-linear-gradient: 패턴을 무한 반복하는 그라디언트
+   
+   pointer-events: none → 클릭이 이 div를 통과해서 아래 버튼에 닿음
+                          (안 그러면 버튼이 안 눌림!)
+   z-index: 999 → 다른 요소들 위에 덮어씌움
+   =================================================================== */
+.crt-overlay {
+  position: fixed;                  /* 스크롤해도 화면에 고정 */
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;             /* 클릭 통과 */
+  background: repeating-linear-gradient(
+    0deg,                           /* 0도 = 위에서 아래로 */
+    rgba(0, 0, 0, 0.15),            /* 15% 검정 */
+    rgba(0, 0, 0, 0.15) 1px,        /* 1px 동안 검정 */
+    transparent 1px,                /* 그 다음은 투명 */
+    transparent 3px                 /* 3px 동안 투명 → 패턴 반복 */
+  );
+  z-index: 999;                     /* 최상위에 띄움 */
+}
+
+/* ===================================================================
+   .app - 전체 컨테이너 (Flexbox 레이아웃)
+   
+   배경에 radial-gradient 두 개를 layer로 쌓아서 네온 빛 분위기 연출
+   여러 background를 콤마(,)로 구분해 겹치기 가능
+   =================================================================== */
+.app {
+  min-height: 100vh;
+  padding: 30px 16px;               /* 위아래 30, 좌우 16 */
+  background:
+    /* 좌상단에서 핑크 빛 퍼짐 */
+    radial-gradient(circle at 20% 20%, rgba(255, 46, 147, 0.15), transparent 40%),
+    /* 우하단에서 사이언 빛 퍼짐 */
+    radial-gradient(circle at 80% 80%, rgba(0, 240, 255, 0.15), transparent 40%),
+    var(--bg-deep);                 /* 마지막 = 가장 아래 깔리는 색 */
+  display: flex;
+  flex-direction: column;           /* 자식을 세로로 쌓음 */
+  align-items: center;              /* 가로 가운데 정렬 */
+  gap: 24px;                        /* 자식들 사이 간격 (margin보다 깔끔) */
+}
+
+/* ===================================================================
+   헤더 영역
+   =================================================================== */
+.header {
+  text-align: center;
+}
+
+/* 메인 타이틀 - 픽셀 폰트 + 다중 그림자로 입체감 */
+.title {
+  font-size: 28px;
+  color: var(--neon-yellow);
+  letter-spacing: 4px;              /* 글자 사이 간격 (픽셀 폰트 가독성 ↑) */
+  text-shadow:
+    3px 3px 0 var(--neon-pink),     /* 첫 그림자 - 핑크 */
+    6px 6px 0 rgba(0, 0, 0, 0.5);   /* 둘째 그림자 - 검정 (깊이감) */
+  /* 무한 반복 깜빡임 애니메이션 */
+  animation: titleGlow 2s ease-in-out infinite alternate;
+  margin-bottom: 12px;
+}
+
+/* @keyframes - 애니메이션 정의 (시작 → 끝) */
+@keyframes titleGlow {
+  from { filter: brightness(1); }   /* 시작: 정상 밝기 */
+  to   { filter: brightness(1.4); } /* 끝: 1.4배 밝게 */
+}
+/* infinite alternate → 끝에서 다시 처음으로 부드럽게 왕복 */
+
+/* 서브타이틀 (★ INSERT COIN ★) */
+.subtitle {
+  font-size: 10px;
+  color: var(--neon-cyan);
+  letter-spacing: 3px;
+  animation: blink 1s infinite;     /* 깜빡이 효과 */
+}
+
+/* 깜빡이 keyframes - 50%까지 보이고 51%부터 흐려짐 */
+@keyframes blink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+/* ===================================================================
+   점수판
+   =================================================================== */
+.scoreboard {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;                  /* 좁은 화면에선 줄바꿈 */
+  justify-content: center;
+}
+
+/* 점수판 박스 하나 */
+.score-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  background: var(--bg-panel);
+  border: 3px solid currentColor;   /* currentColor = 현재 텍스트 색깔 */
+  box-shadow: var(--pixel-black);   /* 픽셀 스타일 검정 그림자 */
+  min-width: 80px;
+}
+
+.score-label { font-size: 9px;  letter-spacing: 1px; }
+.score-value {
+  font-size: 18px;
+  font-family: 'VT323', monospace; /* 옛날 터미널 폰트 (숫자 강조) */
+}
+
+/* 각 점수 색상 - currentColor로 테두리도 자동 매칭 */
+.win-score  { color: var(--neon-cyan); }
+.draw-score { color: var(--neon-green); }
+.lose-score { color: var(--neon-pink); }
+
+/* ===================================================================
+   게임 영역 (박스 2개 + VS)
+   =================================================================== */
+.main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;                  /* 모바일에서 줄바꿈 */
+  margin: 10px 0;
+}
+
+/* VS 텍스트 - 두근거리는 펄스 애니메이션 */
+.vs-text {
+  font-size: 28px;
+  color: var(--neon-yellow);
+  text-shadow: 3px 3px 0 var(--neon-pink);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.2) rotate(-3deg); } /* 살짝 기울이며 커짐 */
+}
+
+/* ===================================================================
+   박스(플레이어 카드) - 핵심!
+   className={`box ${result}`}로 result에 따라 다른 클래스 추가됨
+   =================================================================== */
+.box {
+  width: 260px;
+  background: var(--bg-panel);
+  border: 4px solid white;          /* 기본: 흰 테두리 */
+  box-shadow: var(--pixel-black);
+  padding: 16px;
+  transition: all 0.3s;             /* 모든 속성 변화 0.3초로 부드럽게 */
+}
+
+/* ============ 결과별 박스 스타일 - 동적 className 활용 ============ */
+
+/* 사용자가 이긴 박스: 사이언 테두리 + 빛남 + 번쩍 애니메이션 */
+.box.win {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 30px var(--neon-cyan), var(--pixel-black);
+  animation: winFlash 0.5s ease-in-out 3;  /* 0.5초 × 3번 반복 */
+}
+
+/* 사용자가 진 박스: 핑크 테두리 + 흔들기 */
+.box.lose {
+  border-color: var(--neon-pink);
+  animation: loseShake 0.4s ease-in-out;
+}
+
+/* 무승부: 초록 테두리만 */
+.box.draw {
+  border-color: var(--neon-green);
+}
+
+/* 승리 번쩍 효과 - 배경색 깜빡임 */
+@keyframes winFlash {
+  0%, 100% { background: var(--bg-panel); }
+  50%      { background: rgba(0, 240, 255, 0.2); }
+}
+
+/* 패배 흔들기 - 좌우로 흔듦 */
+@keyframes loseShake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-10px); }
+  75%      { transform: translateX(10px); }
+}
+
+/* ============ 룰렛 돌아가는 동안 흔들기 ============ */
+/* .box.rolling이 적용되면 안의 .img-wrap이 흔들림 */
+.box.rolling .img-wrap {
+  animation: rouletteShake 0.15s ease-in-out infinite;
+}
+
+@keyframes rouletteShake {
+  0%, 100% { transform: translateY(0)    rotate(0deg); }
+  25%      { transform: translateY(-8px) rotate(-3deg); }
+  75%      { transform: translateY(0)    rotate(3deg); }
+}
+
+/* 박스 헤더 (이름 + 상태 점) */
+.box-header {
+  display: flex;
+  justify-content: space-between;   /* 양 끝에 배치 */
+  align-items: center;
+  border-bottom: 2px dashed rgba(255, 255, 255, 0.3);  /* 점선 구분선 */
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.player-tag {
+  font-size: 11px;
+  color: var(--neon-yellow);
+}
+
+/* 깜빡이는 LED 점 (게임기 전원 표시 느낌) */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--neon-green);
+  box-shadow: 0 0 8px var(--neon-green);  /* 빛 번지는 효과 */
+  animation: blink 1s infinite;
+}
+
+/* 이미지 컨테이너 */
+.img-wrap {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  /* inset = 안쪽으로 들어간 테두리 (옛날 모니터 화면 느낌) */
+  border: 2px inset rgba(255, 255, 255, 0.2);
+  margin-bottom: 12px;
+  overflow: hidden;                 /* 이미지가 박스를 벗어나지 않게 */
+}
+
+/* 가위/바위/보 */
+/* 이모지 표시 - 크고 강렬하게 */
+.item-emoji {
+  font-size: 130px;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(255, 230, 0, 0.4));  /* 노란 빛 후광 */
+  /* 픽셀화 효과 (선택사항) */
+  /* image-rendering: pixelated; */
+  user-select: none;  /* 이모지 드래그 선택 막기 */
+  padding-bottom: 18%;
+}
+
+/* 선택 안 했을 때 ? 표시 */
+.placeholder {
+  font-size: 80px;
+  color: rgba(255, 255, 255, 0.2);
+  font-family: 'VT323', monospace;
+}
+
+.item-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+
+/* 결과 라벨 영역 - height 고정으로 박스 크기 일정하게 */
+.result-label {
+  font-size: 14px;
+  text-align: center;
+  height: 22px;
+  letter-spacing: 3px;
+}
+
+/* 결과별 색상 (자식 선택자) */
+.box.win  .result-label { color: var(--neon-cyan); }
+.box.lose .result-label { color: var(--neon-pink); }
+.box.draw .result-label { color: var(--neon-green); }
+
+/* ===================================================================
+   결과 배너 (큰 결과 텍스트)
+   =================================================================== */
+.result-banner {
+  height: 40px;                     /* 결과 없어도 높이 유지 (깜빡임 방지) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-text {
+  font-size: 22px;
+  letter-spacing: 4px;
+  animation: resultPop 0.5s ease-out; /* 등장 시 통통 튀는 애니메이션 */
+}
+
+/* 결과 텍스트 등장 애니메이션 - 작게 시작 → 살짝 크게 → 정상 */
+@keyframes resultPop {
+  0%   { transform: scale(0)   rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1)   rotate(0);    opacity: 1; }
+}
+
+.result-text.win     { color: var(--neon-cyan);   text-shadow: 3px 3px 0 #000; }
+.result-text.lose    { color: var(--neon-pink);   text-shadow: 3px 3px 0 #000; }
+.result-text.draw    { color: var(--neon-green);  text-shadow: 3px 3px 0 #000; }
+.result-text.rolling { color: var(--neon-yellow); animation: blink 0.3s infinite; }
+
+/* ===================================================================
+   게임 버튼 - 픽셀 게임 버튼 느낌
+   =================================================================== */
+.controls {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.game-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  padding: 16px 22px;
+  background: var(--bg-panel);
+  color: var(--neon-yellow);
+  border: 3px solid var(--neon-yellow);
+  box-shadow: var(--pixel-black);   /* 각진 그림자 = 입체감 */
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.1s;             /* 빠른 반응 (게임감) */
+  min-width: 100px;
+}
+
+/* 호버 시 - 색반전 + 위로 떠오름 + 그림자 짙어짐 */
+/* :not(:disabled) → 비활성화일 땐 호버 효과 X */
+.game-btn:hover:not(:disabled) {
+  background: var(--neon-yellow);
+  color: var(--bg-deep);
+  transform: translate(-2px, -2px); /* 좌상단으로 살짝 이동 */
+  box-shadow: 6px 6px 0 #000;       /* 그림자 더 길게 (떠오른 효과) */
+}
+
+/* 클릭 순간 - 다시 눌린 위치로 (실제로 누르는 느낌) */
+.game-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #000;           /* 그림자 사라짐 */
+}
+
+/* 비활성화 상태 (룰렛 도는 중) */
+.game-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-emoji { font-size: 28px; }
+.btn-label { font-size: 10px; }
+
+/* 리셋 버튼 - 핑크 강조 */
+.reset-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  padding: 10px 20px;
+  background: transparent;          /* 투명 배경 */
+  color: var(--neon-pink);
+  border: 2px solid var(--neon-pink);
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: all 0.2s;
+}
+
+.reset-btn:hover:not(:disabled) {
+  background: var(--neon-pink);
+  color: var(--bg-deep);
+}
+
+.reset-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* 푸터 */
+.footer {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 2px;
+  margin-top: 16px;
+  animation: blink 2s infinite;
+}
+
+/* ============================================================
+   ===== 반응형 디자인 (Responsive Web Design) =====
+
+   Mobile-First가 아닌 Desktop-First 방식 사용
+   - 기본은 데스크탑용으로 작성
+   - max-width 미디어쿼리로 작은 화면일 때 덮어쓰기
+
+   브레이크포인트 전략:
+   - 769px 이상: 데스크탑 (기본 스타일 그대로)
+   - 591 ~ 768px: 태블릿 (박스 세로 정렬 시작)
+   - 481 ~ 590px: 작은 태블릿 (폰트·여백 축소)
+   - 480px 이하: 모바일 (모든 요소 컴팩트)
+
+   왜 591px부터 세로? 박스 240px × 2개 + VS + gap = 540px 넘어가서
+   가로 배치하면 양쪽 여백이 거의 없어 답답해 보임
+   ============================================================ */
+
+/* ============================================================
+   [태블릿] 768px 이하
+   - 타이틀과 박스 크기만 조금 줄임
+   - 아직 가로 배치는 유지하지 않음 (591px에서 세로 전환)
+   ============================================================ */
+@media (max-width: 768px) {
+  .title { font-size: 22px; letter-spacing: 2px; }
+  .vs-text { font-size: 24px; }
+  .main { gap: 20px; }
+  .box { width: 240px; }   /* 데스크탑보다 살짝 작게 */
+}
+
+/* ============================================================
+   [세로 전환 지점] 590px 이하
+   - 박스 두 개를 위아래로 쌓음
+   - VS 텍스트가 박스 사이에 자연스럽게 배치됨
+   - flex-direction: column 으로 방향 전환
+   ============================================================ */
+@media (max-width: 600px) {
+  .main {
+    flex-direction: column;   /* 가로 → 세로 정렬 */
+    gap: 16px;
+  }
+
+  /* VS도 살짝 작게 */
+  .vs-text { font-size: 22px; }
+
+  /* 박스도 화면 너비에 맞춰 살짝 줄임 */
+  .box { width: 280px; }
+}
+
+/* ============================================================
+   [모바일] 480px 이하
+   - 모든 요소를 컴팩트하게
+   - 박스는 화면 너비의 90% 사용 (max-width로 상한선 둠)
+   - 버튼은 가로 가득 차게 (flex: 1)
+   ============================================================ */
+@media (max-width: 480px) {
+  .app {
+    padding: 20px 12px;       /* 좌우 여백 최소화 */
+    gap: 18px;                /* 요소 간격 축소 */
+  }
+
+  /* 헤더 - 폰트 줄이고 그림자도 작게 */
+  .title {
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-shadow:
+      2px 2px 0 var(--neon-pink),
+      4px 4px 0 rgba(0, 0, 0, 0.5);
+  }
+  .subtitle { font-size: 8px; }
+
+  /* 점수판 - 한 줄에 3개 들어가도록 압축 */
+  .scoreboard { gap: 8px; }
+  .score-item {
+    padding: 8px 12px;
+    min-width: 65px;          /* 너무 작아지지 않게 최소값 보장 */
+  }
+  .score-label { font-size: 8px; }
+  .score-value { font-size: 14px; }
+
+  /* ===== 핵심 수정: 박스 크기 ===== */
+  /* 이전 버전: max-width만 → 너무 작게 보임 */
+  /* 수정 버전: width 95% + max-width로 화면 거의 가득 채움 */
+  .main { gap: 12px; }
+  .vs-text { font-size: 18px; }
+
+  .box {
+    width: 95%;               /* 화면 너비의 95% (모바일에선 크게) */
+    max-width: 320px;         /* 단, 320px는 넘지 않게 */
+    padding: 14px;
+  }
+
+  /* 이미지 영역도 박스에 맞춰 살짝 키움 */
+  .img-wrap { height: 160px; }
+
+  .item-name { font-size: 10px; }
+  .result-label { font-size: 12px; }
+
+  /* 결과 배너 텍스트 */
+  .result-text {
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+
+  /* ===== 버튼 - 가로 가득 ===== */
+  .controls {
+    gap: 10px;
+    width: 100%;
+    padding: 0 4px;           /* 화면 가장자리 여백 */
+  }
+  .game-btn {
+    min-width: 0;             /* 기본 100px 제한 풀기 */
+    flex: 1;                  /* 남은 공간을 1:1:1로 균등 분할 */
+    padding: 12px 6px;
+    font-size: 9px;
+  }
+  .btn-emoji { font-size: 26px; }
+  .btn-label { font-size: 8px; }
+
+  /* 리셋 버튼 */
+  .reset-btn { font-size: 9px; padding: 8px 16px; }
+  .footer { font-size: 7px; }
+
+  .item-emoji {
+    font-size: 100px;
+  }
+}
+
+/* ============================================================
+   [초소형 모바일] 360px 이하 (갤럭시 폴드 같은 좁은 화면)
+   - 폰트 한 단계 더 축소
+   - 안 넣어도 되지만 안전장치로 추가
+   ============================================================ */
+@media (max-width: 360px) {
+  .title { font-size: 12px; }
+  .box { width: 100%; padding: 10px; }
+  .img-wrap { height: 140px; }
+  .game-btn { padding: 10px 4px; }
+  .btn-emoji { font-size: 22px; }
+  .item-emoji {
+    font-size: 80px;
+  }
+}
+
+
+
